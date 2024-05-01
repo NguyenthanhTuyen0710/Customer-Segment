@@ -1,0 +1,117 @@
+select * from marketing_campaign_new; 
+
+-- Thông tin khách hàng 
+drop table cus_info;
+select ID, Age, Year_Birth, Education, InCome,
+        Marital_Status, KidHome, Teenhome, Dt_Customer, NumDealsPurchases,
+        NumWebPurchases, NumCatalogPurchases, NumStorePurchases,
+        Total_Expenditure, Total_Purchases 
+--into cus_info
+from marketing_campaign_new; 
+ 
+ -- Tổng khách hàng
+ select count(iD) as sum_cus
+ from cus_info 
+
+ -- trung bình độ tuổi
+  select avg(Age) as avg_age
+  from cus_info
+
+-- trung bình thu nhập
+select avg(Income) as avg_income
+from cus_info
+
+-- tình trạng hôn nhân, gia đình của khách hàng 
+select Marital_Status,count(ID) as num_cus, sum(kidHome) as Kid, sum(Teenhome) as Teen 
+---into family_status
+from cus_info
+group by Marital_Status
+
+
+---- tính toán statistic purchases
+select avg(Total_Purchases) as median_purchases , VAR(Total_Purchases) as variance_purchases, 
+        STDEV(Total_Purchases) as STDEV_purchases,min(Total_Purchases) as min_purchases,
+        max(Total_Purchases) as max_purchase
+from cus_info;
+---- tính toán statistic income
+select avg(Income) as median_income, var(income) as variance_income, stdev(income) as stdev_income,
+        min(income) as min_income, max(income) as max_income
+from cus_info;
+
+--- thực hiện phân tích nhóm khách hàng
+drop TABLE cus_feature
+select ID, Total_Purchases, Income, Age, Education, Marital_Status, NumDealsPurchases,
+        NumWebPurchases, NumCatalogPurchases, NumStorePurchases, Total_Expenditure,
+      (case 
+        when Total_Purchases <= 9 then 'Low amount of purchases'
+        when Total_Purchases > 9 and Total_Purchases <= 19 then 
+              'Considerable amount of purchases' 
+        else 'High amount of purchases' 
+      end) as Feature_Purchases,
+      (case
+        when Income < 30000 then 'Low income'
+        when Income >=30000 and Income <= 50000 then 'Medium income'
+        when Income > 50000 and Income <= 70000 then 'High income'
+        else 'Very high income'
+      end) as Feature_Income,
+      (case
+        when Age < 30 then 'Under 30'
+        when Age >= 30 and Age < 60 then 'Middle age'
+        when Age >= 60 and Age < 80 then 'Elderly age'
+        else 'nonagenarians'
+      end) as Feature_Age
+--into cus_feature
+from Cus_info
+
+select Feature_Purchases, NumDealsPurchases, sum(NumWebPurchases) as WebPurchases,
+        sum(NumCatalogPurchases) as CatalogPurchases, sum(NumStorePurchases) as StorePurchases
+
+into shoping_source   
+from cus_feature
+group by Feature_Purchases,NumDealsPurchases
+
+
+select feature_purchases, Feature_Income, count(id)
+from cus_feature
+group by feature_purchases, Feature_Income
+
+
+
+SELECT
+    b.feature_income,
+    SUM(a.MntWines) AS Wines,
+    SUM(a.MntFishProducts) AS Fish,
+    SUM(a.MntFruits) AS Fruits,
+    SUM(a.MntGoldProds) AS Gold,
+    SUM(a.MntMeatProducts) AS Meat,
+    SUM(a.MntSweetProducts) AS SweetProducts,
+    SUM(a.NumCatalogPurchases) AS Catalog_Purchases,
+    SUM(a.NumStorePurchases) AS Store_Purchases,
+    SUM(a.NumWebPurchases) AS WebPurchases,
+    Count(a.AcceptedCmp1) As Campaign1,
+    count(a.AcceptedCmp2) As Campaign2,
+    count(a.AcceptedCmp3) As Campaign3,
+    count(a.AcceptedCmp4) As campaign4,
+    count(a.AcceptedCmp5) AS campaign5,
+    count(a.NumDealsPurchases) as Deals,
+    count(a.Complain) as Complain
+FROM
+    marketing_campaign_new AS a
+JOIN
+    cus_feature AS b
+ON
+    a.ID = b.ID
+WHERE
+    b.feature_income = 'Very high income'
+GROUP BY
+    b.feature_income;
+
+
+select *, case  when b.feature_income = 'Low income' then 'Silver Customer'
+                when b.feature_income = 'Medium income' then 'Gold Customer'
+                when b.feature_income = 'High income' then 'Platinum Customer'
+                else 'Diamond Customer'
+          end as 'Cus_type'
+from marketing_campaign_new AS a
+join cus_feature as b
+on a.ID = b.ID
